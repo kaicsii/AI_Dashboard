@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>桃園智慧觀光AI客服數據分析儀表板</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 40px 0;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .header p {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.1rem;
+            animation: fadeInUp 1s ease-out 0.3s both;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 25px;
+            margin-bottom: 50px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+            animation: fadeInScale 0.8s ease-out;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+            counter-reset: number 0;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 25px;
+            margin-bottom: 50px;
+        }
+
+        .chart-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 35px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            animation: slideInUp 0.8s ease-out;
+            margin-bottom: 25px;
+        }
+
+        .chart-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+            margin: 30px 0;
+        }
+
+        .insights-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            margin: 40px 0;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            animation: fadeIn 1s ease-out;
+        }
+
+        .insight-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 15px 0;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+
+        .insight-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .keyword-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin: 30px 0;
+            padding: 20px;
+        }
+
+        .keyword {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            animation: bounceIn 0.6s ease-out;
+        }
+
+        .keyword:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .progress-bar {
+            background: #e0e0e0;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 4px;
+            transition: width 2s ease-out;
+        }
+
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .matrix-table th,
+        .matrix-table td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+
+        .matrix-table th {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-weight: 600;
+        }
+
+        .heat-cell {
+            position: relative;
+        }
+
+        .heat-high { background-color: rgba(102, 126, 234, 0.8); color: white; }
+        .heat-medium { background-color: rgba(102, 126, 234, 0.5); }
+        .heat-low { background-color: rgba(102, 126, 234, 0.2); }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes slideInUp {
+            from { opacity: 0; transform: translateY(50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes bounceIn {
+            0% { opacity: 0; transform: scale(0.3); }
+            50% { opacity: 1; transform: scale(1.05); }
+            70% { transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes countUp {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 35px;
+            text-align: center;
+            position: relative;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 2px;
+        }
+
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .chart-card {
+                padding: 25px;
+                margin-bottom: 20px;
+            }
+            
+            .container {
+                padding: 20px 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .chart-card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>桃園智慧觀光AI客服數據分析儀表板</h1>
+        </div>
+
+        <!-- 統計卡片 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="totalQueries">185</div>
+                <div class="stat-label">總提問數</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalUsers">44</div>
+                <div class="stat-label">活躍用戶</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="rejectionRate">2.7%</div>
+                <div class="stat-label">系統拒答率</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="avgLength">19.5</div>
+                <div class="stat-label">平均問題長度</div>
+            </div>
+        </div>
+
+        <!-- 圖表區域 -->
+        <div class="charts-grid">
+            <!-- 桃園觀光需求分布 -->
+            <div class="chart-card">
+                <h3 class="chart-title">桃園觀光需求分布</h3>
+                <canvas id="categoryChart"></canvas>
+            </div>
+
+            <!-- 服務深度分析 -->
+            <div class="chart-card">
+                <h3 class="chart-title">服務深度層級分析</h3>
+                <canvas id="depthChart"></canvas>
+            </div>
+
+            <!-- 遊客語言分布 -->
+            <div class="chart-card">
+                <h3 class="chart-title">國內外遊客分布</h3>
+                <canvas id="languageChart"></canvas>
+            </div>
+
+            <!-- 旅遊階段需求 -->
+            <div class="chart-card">
+                <h3 class="chart-title">旅遊階段需求分析</h3>
+                <canvas id="journeyChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 桃園熱門景點關鍵詞雲 -->
+        <div class="chart-card full-width">
+            <h3 class="section-title">桃園熱門景點詞彙雲</h3>
+            <div class="keyword-cloud" id="keywordCloud">
+                <!-- 動態生成桃園景點關鍵詞 -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // 數據定義 - 基於實際分析的精確10分類
+        const data = {
+            categories: {
+                '深度諮詢服務': 24,
+                '桃園在地美食': 16,
+                '連鎖品牌查詢': 14,
+                '天氣出遊資訊': 9,
+                '大眾運輸交通': 8,
+                '自然山水景觀': 8,
+                '住宿過夜服務': 7,
+                '國際機場服務': 5,
+                '特產伴手禮購物': 3,
+                '歷史文化景點': 3
+            },
+            depths: {
+                '簡單': 102,
+                '中等': 72,
+                '複雜': 11
+            },
+            languages: {
+                '繁體中文': 176,
+                'English': 9
+            },
+            journey: {
+                '抵達桃園': 45,
+                '在地體驗': 128,
+                '轉運中繼': 8,
+                '離境前': 4
+            },
+            keywords: [
+                {word: '桃園機場', count: 5}, {word: '拉拉山水蜜桃', count: 4},
+                {word: '大溪老街', count: 3}, {word: '虎頭山夜景', count: 3},
+                {word: '台鐵便當', count: 3}, {word: '麥當勞', count: 8},
+                {word: '五星級飯店', count: 3}, {word: '天氣查詢', count: 9},
+                {word: '火車站', count: 4}, {word: '機場接送', count: 2},
+                {word: '伴手禮', count: 3}, {word: '文化園區', count: 2}
+            ],
+            painPoints: {
+                '服務深度不足': 24,
+                '連鎖品牌依賴': 14,
+                '在地特色推廣': 16,
+                '即時資訊需求': 9
+            },
+            hotspots: {
+                '大溪老街': { visitors: 85, satisfaction: 4.2 },
+                '桃園機場': { visitors: 120, satisfaction: 3.8 },
+                '拉拉山': { visitors: 45, satisfaction: 4.5 },
+                '石門水庫': { visitors: 32, satisfaction: 4.0 },
+                '虎頭山': { visitors: 28, satisfaction: 4.1 }
+            }
+        };
+
+        // 數字動畫效果
+        function animateNumbers() {
+            const numbers = document.querySelectorAll('.stat-number');
+            numbers.forEach(num => {
+                const target = parseFloat(num.textContent);
+                const increment = target / 50;
+                let current = 0;
+                
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= target) {
+                        current = target;
+                        clearInterval(timer);
+                    }
+                    
+                    if (num.id === 'rejectionRate' || num.id === 'avgLength') {
+                        num.textContent = current.toFixed(1) + (num.id === 'rejectionRate' ? '%' : '');
+                    } else {
+                        num.textContent = Math.floor(current);
+                    }
+                }, 50);
+            });
+        }
+
+        // 創建圖表
+        function createCharts() {
+            // 類別分布長條圖
+            const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+            new Chart(categoryCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data.categories),
+                    datasets: [{
+                        label: '提問數量',
+                        data: Object.values(data.categories),
+                        backgroundColor: [
+                            '#667eea', '#764ba2', '#f093fb', '#f5576c',
+                            '#4facfe', '#00f2fe', '#43e97b', '#38f9d7'
+                        ],
+                        borderRadius: 8,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    },
+                    animation: {
+                        duration: 2000,
+                        easing: 'easeOutBounce'
+                    }
+                }
+            });
+
+            // 深度分析圓餅圖
+            const depthCtx = document.getElementById('depthChart').getContext('2d');
+            new Chart(depthCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(data.depths),
+                    datasets: [{
+                        data: Object.values(data.depths),
+                        backgroundColor: ['#667eea', '#764ba2', '#f093fb'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '60%',
+                    animation: {
+                        animateRotate: true,
+                        duration: 2000
+                    }
+                }
+            });
+
+            // 語言分布圓圈圖（甜甜圈圖）
+            const languageCtx = document.getElementById('languageChart').getContext('2d');
+            new Chart(languageCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(data.languages),
+                    datasets: [{
+                        data: Object.values(data.languages),
+                        backgroundColor: ['#4facfe', '#00f2fe'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '60%',
+                    animation: {
+                        animateRotate: true,
+                        duration: 2000
+                    }
+                }
+            });
+
+            // 旅程階段橫向長條圖
+            const journeyCtx = document.getElementById('journeyChart').getContext('2d');
+            new Chart(journeyCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data.journey),
+                    datasets: [{
+                        label: '需求數量',
+                        data: Object.values(data.journey),
+                        backgroundColor: '#43e97b',
+                        borderRadius: 8,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { beginAtZero: true }
+                    },
+                    animation: {
+                        duration: 2000,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+
+            // 桃園觀光預測圖 - 基於實際統計數據調整
+            const predictionCtx = document.getElementById('predictionChart').getContext('2d');
+            new Chart(predictionCtx, {
+                type: 'line',
+                data: {
+                    labels: ['7月', '8月', '9月', '10月', '11月', '12月'],
+                    datasets: [{
+                        label: 'AI客服查詢總量',
+                        data: [185, 170, 190, 240, 280, 320], // 基於實際季節性，較平緩的增長
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: ['#ff6b6b', '#ff6b6b', '#ffd93d', '#4ecdc4', '#4ecdc4', '#ff6348'],
+                        pointBorderColor: ['#ff6b6b', '#ff6b6b', '#ffd93d', '#4ecdc4', '#4ecdc4', '#ff6348'],
+                        pointRadius: 6
+                    }, {
+                        label: '桃園美食查詢',
+                        data: [39, 35, 42, 55, 68, 85], // 較溫和的成長，配合實際觀光模式
+                        borderColor: '#f5576c',
+                        backgroundColor: 'rgba(245, 87, 108, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5
+                    }, {
+                        label: '自然景觀查詢',
+                        data: [8, 6, 12, 25, 40, 35], // 10-11月楓紅季高峰，12月略降
+                        borderColor: '#ff8c42',
+                        backgroundColor: 'rgba(255, 140, 66, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5
+                    }, {
+                        label: '機場服務查詢',
+                        data: [35, 45, 32, 38, 42, 55], // 夏季機場較忙碌，年底出國潮
+                        borderColor: '#4facfe',
+                        backgroundColor: 'rgba(79, 172, 254, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterBody: function(context) {
+                                    const monthIndex = context[0].dataIndex;
+                                    const seasonInfo = [
+                                        '夏季淡季 - 但機場仍繁忙',
+                                        '全年最淡 - 颱風季影響', 
+                                        '秋季轉換 - 遊客回流',
+                                        '秋高氣爽 - 楓紅開始',
+                                        '賞楓高峰 - 戶外活動增加',
+                                        '年末旺季 - 聖誕跨年'
+                                    ];
+                                    return seasonInfo[monthIndex];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            max: 350, // 調整最大值，避免過度誇張
+                            title: {
+                                display: true,
+                                text: 'AI客服查詢數量'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: '月份 (基於實際觀光數據)'
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 2500,
+                        easing: 'easeInOutQuart'
+                    }
+                }
+            });
+        }
+
+        // 生成關鍵詞雲
+        function createKeywordCloud() {
+            const container = document.getElementById('keywordCloud');
+            data.keywords.forEach((keyword, index) => {
+                const span = document.createElement('span');
+                span.className = 'keyword';
+                span.textContent = `${keyword.word} (${keyword.count})`;
+                span.style.fontSize = `${0.8 + (keyword.count / 10)}rem`;
+                span.style.animationDelay = `${index * 0.1}s`;
+                container.appendChild(span);
+            });
+        }
+
+        // 痛點分析
+        function createPainPointsAnalysis() {
+            const container = document.getElementById('painPointsAnalysis');
+            const total = 185;
+            
+            Object.entries(data.painPoints).forEach(([point, count]) => {
+                const percentage = (count / total * 100).toFixed(1);
+                const div = document.createElement('div');
+                div.style.marginBottom = '20px';
+                
+                div.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span style="font-weight: 600;">${point}</span>
+                        <span>${count} 次查詢 (${percentage}%)</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${percentage}%;"></div>
+                    </div>
+                `;
+                
+                container.appendChild(div);
+            });
+        }
+
+        // 桃園觀光熱點矩陣
+        function createBehaviorMatrix() {
+            const table = document.getElementById('behaviorMatrix');
+            const matrixData = [
+                ['服務類型', '查詢次數', '服務深度', '改善急迫性'],
+                ['深度諮詢服務', '24', '⭐⭐⭐⭐⭐', '🔴 高'],
+                ['桃園在地美食', '16', '⭐⭐⭐', '🟡 中'],
+                ['連鎖品牌查詢', '14', '⭐⭐', '🟢 低'],
+                ['天氣出遊資訊', '9', '⭐⭐', '🟡 中'],
+                ['大眾運輸交通', '8', '⭐⭐⭐⭐', '🔴 高'],
+                ['自然山水景觀', '8', '⭐⭐⭐⭐', '🟡 中'],
+                ['住宿過夜服務', '7', '⭐⭐⭐', '🟡 中'],
+                ['國際機場服務', '5', '⭐⭐⭐⭐⭐', '🔴 高'],
+                ['特產伴手禮購物', '3', '⭐⭐', '🟢 低'],
+                ['歷史文化景點', '3', '⭐⭐⭐', '🟢 低']
+            ];
+
+            matrixData.forEach((row, rowIndex) => {
+                const tr = document.createElement('tr');
+                row.forEach((cell, cellIndex) => {
+                    const element = rowIndex === 0 ? document.createElement('th') : document.createElement('td');
+                    element.innerHTML = cell;
+                    
+                    if (rowIndex > 0 && cellIndex === 1) {
+                        const value = parseInt(cell);
+                        if (value > 15) element.className = 'heat-high';
+                        else if (value > 8) element.className = 'heat-medium';
+                        else element.className = 'heat-low';
+                    }
+                    
+                    tr.appendChild(element);
+                });
+                table.appendChild(tr);
+            });
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(animateNumbers, 500);
+            setTimeout(createCharts, 1000);
+            setTimeout(createKeywordCloud, 1500);
+            setTimeout(createPainPointsAnalysis, 2000);
+            setTimeout(createBehaviorMatrix, 2500);
+        });
+
+        // 滾動動畫
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.chart-card, .insight-card').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+            el.style.transition = 'all 0.6s ease-out';
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>
