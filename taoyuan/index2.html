@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI智慧客服系統 - 桃園旅客需求分析儀表板</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1.5" fill="rgba(255,255,255,0.08)"/><circle cx="50" cy="10" r="1" fill="rgba(255,255,255,0.06)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(30px, -30px) rotate(120deg); }
+            66% { transform: translate(-20px, 20px) rotate(240deg); }
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 3px solid #e9ecef;
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 15px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-tab:hover {
+            background: rgba(52, 152, 219, 0.1);
+            color: #3498db;
+        }
+
+        .nav-tab.active {
+            color: #3498db;
+            background: white;
+        }
+
+        .nav-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #3498db, #2980b9);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover::before {
+            transform: scale(2);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chart-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #3498db, #e74c3c, #f39c12, #27ae60);
+        }
+
+        .chart-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .insights-section {
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .insights-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .insight-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .insight-item h4 {
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+
+        .top-list {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .top-list h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.3rem;
+        }
+
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #ecf0f1;
+            transition: all 0.3s ease;
+        }
+
+        .list-item:hover {
+            background: #f8f9fa;
+            transform: translateX(5px);
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .list-rank {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .list-name {
+            flex: 1;
+            margin-left: 15px;
+            font-weight: 500;
+        }
+
+        .list-count {
+            background: #ecf0f1;
+            color: #7f8c8d;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .recommendations {
+            background: linear-gradient(135deg, #55a3ff 0%, #003d82 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-top: 30px;
+        }
+
+        .recommendations h3 {
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.5rem;
+        }
+
+        .rec-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .rec-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .rec-card h4 {
+            margin-bottom: 10px;
+            color: #ffeaa7;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #7f8c8d;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .nav-tabs {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1>AI智慧客服系統 - 桃園旅客需求分析儀表板</h1>
+            <p>桃園市觀光旅遊洞見與遊客行為分析平台</p>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('overview')">總覽統計</button>
+            <button class="nav-tab" onclick="showTab('interests')">需求分析</button>
+            <button class="nav-tab" onclick="showTab('behavior')">行為模式</button>
+            <button class="nav-tab" onclick="showTab('insights')">觀光洞見</button>
+        </div>
+
+        <div id="overview" class="tab-content active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalQueries">載入中...</div>
+                    <div class="stat-label">總查詢數</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="uniqueUsers">載入中...</div>
+                    <div class="stat-label">獨立用戶</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="uniqueThreads">載入中...</div>
+                    <div class="stat-label">對話串數</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="refusalRate">載入中...</div>
+                    <div class="stat-label">拒絕查詢率</div>
+                </div>
+            </div>
+
+            <div class="chart-grid">
+                <div class="chart-container">
+                    <h3 class="chart-title">查詢類型分布</h3>
+                    <canvas id="queryTypeChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3 class="chart-title">語言分布</h3>
+                    <canvas id="languageChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3 class="chart-title">24小時查詢趨勢</h3>
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3 class="chart-title">每日查詢量</h3>
+                    <canvas id="dailyChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div id="interests" class="tab-content">
+            <div class="chart-grid">
+                <div class="top-list">
+                    <h3>熱門興趣關鍵字 Top 15</h3>
+                    <div id="topInterestsList">載入中...</div>
+                </div>
+                <div class="top-list">
+                    <h3>熱門查詢分類 Top 10</h3>
+                    <div id="topCategoriesList">載入中...</div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <h3 class="chart-title">旅客興趣分布圖</h3>
+                <canvas id="interestsChart"></canvas>
+            </div>
+        </div>
+
+        <div id="behavior" class="tab-content">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="avgQueryLength">載入中...</div>
+                    <div class="stat-label">平均查詢長度</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="avgUserQueries">載入中...</div>
+                    <div class="stat-label">用戶平均查詢次數</div>
+                </div>
+            </div>
+
+            <div class="chart-grid">
+                <div class="top-list">
+                    <h3>最活躍用戶 Top 5</h3>
+                    <div id="topUsersList">載入中...</div>
+                </div>
+                <div class="chart-container">
+                    <h3 class="chart-title">查詢長度分布</h3>
+                    <canvas id="lengthDistChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div id="insights" class="tab-content">
+            <div class="insights-section">
+                <h3 class="insights-title">桃園觀光旅遊核心洞見</h3>
+                
+                <div class="insight-item">
+                    <h4>機場接駁成為首要需求</h4>
+                    <p>機場接駁相關查詢佔總興趣的3.8%，顯示桃園國際機場對旅客的重要性。建議加強機場到市區各景點的接駁服務資訊，推出即時接駁班次查詢系統。</p>
+                </div>
+
+                <div class="insight-item">
+                    <h4>Xpark水族館持續熱門</h4>
+                    <p>Xpark相關查詢排名前三，包含票價、交通、營業時間等。建議整合套票優惠資訊，提供線上預約服務，並結合周邊景點推出一日遊套裝行程。</p>
+                </div>
+
+                <div class="insight-item">
+                    <h4>夜市美食文化受歡迎</h4>
+                    <p>中壢夜市、桃園夜市查詢頻繁，美食相關詢問涵蓋必吃推薦到停車資訊。建議推出夜市美食地圖APP，結合AR導覽功能，提升遊客體驗。</p>
+                </div>
+
+                <div class="insight-item">
+                    <h4>親子旅遊需求顯著</h4>
+                    <p>親子景點查詢佔重要比例，包含小人國、埔心牧場等。建議開發親子友善設施地圖，推出親子套票優惠，加強親子活動資訊推播。</p>
+                </div>
+            </div>
+
+            <div class="recommendations">
+                <h3>智慧觀光發展建議</h3>
+                <div class="rec-grid">
+                    <div class="rec-card">
+                        <h4>系統優化建議</h4>
+                        <p>• 強化機場接駁即時查詢<br>
+                        • 整合多語言支援（增加日韓語）<br>
+                        • 建立景點預約整合平台<br>
+                        • 優化行動裝置使用體驗</p>
+                    </div>
+                    
+                    <div class="rec-card">
+                        <h4>服務擴展建議</h4>
+                        <p>• 開發桃園觀光一卡通<br>
+                        • 建立智慧停車導引系統<br>
+                        • 推出AR實境導覽服務<br>
+                        • 整合電子支付與優惠券</p>
+                    </div>
+                    
+                    <div class="rec-card">
+                        <h4>行銷策略建議</h4>
+                        <p>• 打造「航空城觀光」品牌<br>
+                        • 強化親子遊憩行銷<br>
+                        • 發展工業觀光特色<br>
+                        • 推廣客家文化體驗</p>
+                    </div>
+                    
+                    <div class="rec-card">
+                        <h4>數據應用建議</h4>
+                        <p>• 建立遊客流量預測系統<br>
+                        • 開發個人化推薦引擎<br>
+                        • 整合交通流量大數據<br>
+                        • 建立觀光產值評估模型</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 模擬桃園觀光數據
+        function getMockAnalysisData() {
+            return {
+                // 基本統計
+                basic: {
+                    totalQueries: 1500,
+                    uniqueUsers: 248,
+                    uniqueThreads: 367,
+                    refusalRate: "4.2"
+                },
+                
+                // 語言分布
+                languages: {
+                    "繁體中文": 420,
+                    "English": 35,
+                    "日本語": 28,
+                    "한국어": 15,
+                    "简体中文": 12
+                },
+                
+                // 查詢類型
+                queryTypes: {
+                    "交通": 125,
+                    "景點": 168,
+                    "美食": 142,
+                    "住宿": 87,
+                    "活動": 93,
+                    "購物": 65
+                },
+                
+                // 熱門興趣（桃園特色）
+                topInterests: [
+                    ["機場接駁", 38],
+                    ["Xpark", 35],
+                    ["中壢夜市", 31],
+                    ["大溪老街", 28],
+                    ["石門水庫", 25],
+                    ["小人國", 23],
+                    ["拉拉山", 22],
+                    ["慈湖", 20],
+                    ["桃園夜市", 19],
+                    ["華泰名品城", 18],
+                    ["埔心牧場", 17],
+                    ["青塘園", 16],
+                    ["虎頭山", 15],
+                    ["客家文化", 14],
+                    ["觀光工廠", 13]
+                ],
+                
+                // 熱門分類（桃園特色）
+                topCategories: [
+                    ["親子景點", 89],
+                    ["夜市美食", 76],
+                    ["購物商場", 68],
+                    ["自然風景", 62],
+                    ["文化古蹟", 58],
+                    ["機場服務", 52],
+                    ["主題樂園", 48],
+                    ["休閒農場", 45],
+                    ["登山步道", 42],
+                    ["觀光工廠", 38]
+                ],
+                
+                // 時間分析
+                timeStats: {
+                    daily: {
+                        "2025-07-01": 145,
+                        "2025-07-02": 178,
+                        "2025-07-03": 156,
+                        "2025-07-04": 189,
+                        "2025-07-05": 167,
+                        "2025-07-06": 198,
+                        "2025-07-07": 212,
+                        "2025-07-08": 134,
+                        "2025-07-09": 121
+                    },
+                    hourly: {
+                        "0": 28, "1": 18, "2": 12, "3": 8, "4": 6, "5": 9,
+                        "6": 22, "7": 38, "8": 56, "9": 68, "10": 72, "11": 75,
+                        "12": 82, "13": 78, "14": 71, "15": 69, "16": 65, "17": 58,
+                        "18": 52, "19": 48, "20": 42, "21": 38, "22": 32, "23": 30
+                    }
+                },
+                
+                // 查詢長度統計
+                queryLength: {
+                    average: "14.8",
+                    min: 2,
+                    max: 92,
+                    median: 14
+                },
+                
+                // 最活躍用戶
+                topUsers: [
+                    ["A7B9E2F1", 67],
+                    ["C3D5A8B2", 45],
+                    ["E9F1C4D6", 38],
+                    ["B2A7F5E8", 32],
+                    ["D6E9A3C1", 28]
+                ]
+            };
+        }
+
+        // 載入和分析數據函數（使用模擬數據）
+        async function loadAndAnalyzeData() {
+            try {
+                console.log('使用模擬數據載入...');
+                
+                // 模擬載入時間
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                const analysisResults = getMockAnalysisData();
+                
+                console.log('模擬數據載入完成');
+                
+                // 存儲到全域變數
+                window.taoyuanAnalysisData = analysisResults;
+                
+                return analysisResults;
+                
+            } catch (error) {
+                console.error('載入數據失敗:', error);
+                throw error;
+            }
+        }
+
+        // 輔助函數：計數
+        function countBy(array, key) {
+            const result = {};
+            if (typeof key === 'string') {
+                array.forEach(item => {
+                    const val = item[key];
+                    result[val] = (result[val] || 0) + 1;
+                });
+            } else {
+                array.forEach(item => {
+                    result[item] = (result[item] || 0) + 1;
+                });
+            }
+            return result;
+        }
+
+        // 輔助函數：取得排序後的前N項
+        function getTopEntries(obj, limit) {
+            return Object.entries(obj)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, limit);
+        }
+
+        // 全域變數
+        let chartInstances = {};
+
+        // 頁籤切換函數
+        function showTab(tabName) {
+            // 隱藏所有內容
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 移除所有按鈕的active類別
+            document.querySelectorAll('.nav-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 顯示選中的內容
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // 初始化函數
+        async function initializeDashboard() {
+            try {
+                // 顯示載入中狀態
+                showLoadingState();
+                
+                console.log('開始初始化儀表板...');
+                
+                // 載入數據
+                const data = await loadAndAnalyzeData();
+                
+                if (!data) {
+                    throw new Error('數據載入失敗');
+                }
+
+                console.log('數據載入成功，開始更新界面...');
+                
+                // 更新基本統計
+                console.log('更新基本統計數據...');
+                document.getElementById('totalQueries').textContent = data.basic.totalQueries.toLocaleString();
+                document.getElementById('uniqueUsers').textContent = data.basic.uniqueUsers.toLocaleString();
+                document.getElementById('uniqueThreads').textContent = data.basic.uniqueThreads.toLocaleString();
+                document.getElementById('refusalRate').textContent = data.basic.refusalRate + '%';
+
+                // 計算額外統計
+                document.getElementById('avgQueryLength').textContent = data.queryLength.average;
+                document.getElementById('avgUserQueries').textContent = (data.basic.totalQueries / data.basic.uniqueUsers).toFixed(1);
+
+                console.log('創建圖表...');
+                // 創建圖表
+                createQueryTypeChart(data.queryTypes);
+                createLanguageChart(data.languages);
+                createHourlyChart(data.timeStats.hourly);
+                createDailyChart(data.timeStats.daily);
+                createInterestsChart(data.topInterests);
+                
+                console.log('創建排行榜...');
+                // 創建排行榜
+                createTopInterestsList(data.topInterests);
+                createTopCategoriesList(data.topCategories);
+                createTopUsersList(data.topUsers);
+                
+                console.log('儀表板初始化完成！');
+                
+                // 隱藏載入狀態
+                hideLoadingState();
+                
+            } catch (error) {
+                console.error('Dashboard initialization failed:', error);
+                showErrorState(error.message);
+            }
+        }
+
+        // 顯示載入狀態
+        function showLoadingState() {
+            const elements = ['totalQueries', 'uniqueUsers', 'uniqueThreads', 'refusalRate', 'avgQueryLength', 'avgUserQueries'];
+            elements.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = '<span style="color: #3498db;">載入中...</span>';
+            });
+            
+            // 清空列表
+            const lists = ['topInterestsList', 'topCategoriesList', 'topUsersList'];
+            lists.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = '<div style="text-align: center; padding: 20px; color: #7f8c8d;">📊 正在分析數據...</div>';
+            });
+        }
+
+        // 隱藏載入狀態
+        function hideLoadingState() {
+            console.log('✅ 儀表板載入完成！所有圖表和統計數據已準備就緒。');
+        }
+
+        // 顯示錯誤狀態
+        function showErrorState(message) {
+            const elements = ['totalQueries', 'uniqueUsers', 'uniqueThreads', 'refusalRate', 'avgQueryLength', 'avgUserQueries'];
+            elements.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = '<span style="color: #e74c3c;">載入失敗</span>';
+            });
+            console.error('❌ 載入錯誤:', message);
+        }
+
+        // 創建查詢類型圖表
+        function createQueryTypeChart(data) {
+            const ctx = document.getElementById('queryTypeChart');
+            if (!ctx) return;
+            
+            if (chartInstances.queryType) {
+                chartInstances.queryType.destroy();
+            }
+            
+            const labels = Object.keys(data);
+            const values = Object.values(data);
+            
+            chartInstances.queryType = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+            console.log('查詢類型圖表創建完成');
+        }
+
+        // 創建語言分布圖表
+        function createLanguageChart(data) {
+            const ctx = document.getElementById('languageChart');
+            if (!ctx) return;
+            
+            if (chartInstances.language) {
+                chartInstances.language.destroy();
+            }
+            
+            chartInstances.language = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(data),
+                    datasets: [{
+                        data: Object.values(data),
+                        backgroundColor: ['#FF9F43', '#10AC84', '#5F27CD', '#EE5A6F', '#48DBFB'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+            console.log('語言分布圖表創建完成');
+        }
+
+        // 創建每小時查詢圖表
+        function createHourlyChart(data) {
+            const ctx = document.getElementById('hourlyChart');
+            if (!ctx) return;
+            
+            if (chartInstances.hourly) {
+                chartInstances.hourly.destroy();
+            }
+            
+            // 準備24小時數據
+            const hours = Array.from({length: 24}, (_, i) => i);
+            const counts = hours.map(hour => data[hour] || 0);
+            
+            chartInstances.hourly = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: hours.map(h => h + ':00'),
+                    datasets: [{
+                        label: '查詢次數',
+                        data: counts,
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            console.log('每小時查詢圖表創建完成');
+        }
+
+        // 創建每日查詢圖表
+        function createDailyChart(data) {
+            const ctx = document.getElementById('dailyChart');
+            if (!ctx) return;
+            
+            if (chartInstances.daily) {
+                chartInstances.daily.destroy();
+            }
+            
+            chartInstances.daily = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data),
+                    datasets: [{
+                        label: '查詢次數',
+                        data: Object.values(data),
+                        backgroundColor: 'rgba(231, 76, 60, 0.8)',
+                        borderColor: '#e74c3c',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            console.log('每日查詢圖表創建完成');
+        }
+
+        // 創建興趣分布圖表
+        function createInterestsChart(data) {
+            const ctx = document.getElementById('interestsChart');
+            if (!ctx) return;
+            
+            if (chartInstances.interests) {
+                chartInstances.interests.destroy();
+            }
+            
+            chartInstances.interests = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(item => item[0]),
+                    datasets: [{
+                        label: '查詢次數',
+                        data: data.map(item => item[1]),
+                        backgroundColor: 'rgba(46, 204, 113, 0.8)',
+                        borderColor: '#2ecc71',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            console.log('興趣分布圖表創建完成');
+        }
+
+        // 創建熱門興趣列表
+        function createTopInterestsList(data) {
+            const container = document.getElementById('topInterestsList');
+            if (!container) return;
+            
+            container.innerHTML = data.map((item, index) => `
+                <div class="list-item">
+                    <div class="list-rank">${index + 1}</div>
+                    <div class="list-name">${item[0]}</div>
+                    <div class="list-count">${item[1]}</div>
+                </div>
+            `).join('');
+            console.log('熱門興趣列表創建完成');
+        }
+
+        // 創建熱門分類列表
+        function createTopCategoriesList(data) {
+            const container = document.getElementById('topCategoriesList');
+            if (!container) return;
+            
+            container.innerHTML = data.map((item, index) => `
+                <div class="list-item">
+                    <div class="list-rank">${index + 1}</div>
+                    <div class="list-name">${item[0]}</div>
+                    <div class="list-count">${item[1]}</div>
+                </div>
+            `).join('');
+            console.log('熱門分類列表創建完成');
+        }
+
+        // 創建最活躍用戶列表
+        function createTopUsersList(data) {
+            const container = document.getElementById('topUsersList');
+            if (!container) return;
+            
+            container.innerHTML = data.map((item, index) => `
+                <div class="list-item">
+                    <div class="list-rank">${index + 1}</div>
+                    <div class="list-name">用戶 ${item[0].substring(0, 8)}...</div>
+                    <div class="list-count">${item[1]} 次</div>
+                </div>
+            `).join('');
+            console.log('最活躍用戶列表創建完成');
+        }
+
+        // 頁面加載完成後初始化
+        window.addEventListener('load', function() {
+            // 立即執行初始化
+            initializeDashboard();
+        });
+    </script>
+</body>
+</html>
